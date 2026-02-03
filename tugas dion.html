@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Coffee POS</title>
+    <style>
+        :root { --coffee: #00a2ff; --milk: #f4f1ea; --accent: #27ae60; --gold: #b8860b; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: var(--milk); color: #333; padding-bottom: 100px; }
+        
+        header { background: var(--coffee); color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .container { max-width: 600px; margin: auto; padding: 20px; }
+        
+        .form-group { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .form-group input, .form-group select { width: 100%; padding: 10px; margin-top: 8px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+
+        .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .card { background: white; border-radius: 15px; padding: 15px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        .card h3 { margin: 10px 0 5px; font-size: 1rem; }
+        .price { color: var(--gold); font-weight: bold; margin-bottom: 10px; }
+        .btn-add { background: var(--coffee); color: white; border: none; padding: 8px 20px; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+        .btn-add:active { transform: scale(0.9); }
+
+        .cart-bar { position: fixed; bottom: 0; width: 100%; max-width: 600px; background: white; padding: 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; border-radius: 20px 20px 0 0; }
+        .btn-pay { background: var(--accent); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+
+        /* Modal Struk */
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
+        .receipt { background: #fff; width: 85%; max-width: 350px; padding: 25px; border-radius: 5px; font-family: 'Courier New', monospace; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .receipt h2 { text-align: center; margin-top: 0; border-bottom: 2px dashed #333; padding-bottom: 10px; }
+        .receipt-line { display: flex; justify-content: space-between; margin: 5px 0; }
+        .total-line { border-top: 2px dashed #333; margin-top: 10px; padding-top: 10px; font-weight: bold; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>☕ COFFEE TECH</h1>
+    <p>Modern Ordering System</p>
+</header>
+
+<div class="container">
+    <div class="form-group">
+        <label>Nama Pelanggan:</label>
+        <input type="text" id="customerName" placeholder="Masukkan nama Anda">
+        <label style="display:block; margin-top:10px;">Metode Pembayaran:</label>
+        <select id="paymentMethod">
+            <option value="Tunai">Tunai / Kasir</option>
+            <option value="OVO">OVO</option>
+            <option value="Dana">Dana</option>
+            <option value="QRIS">QRIS</option>
+        </select>
+    </div>
+
+    <div class="menu-grid" id="menuDisplay"></div>
+</div>
+
+<div class="cart-bar">
+    <div>
+        <small>Total Pesanan:</small><br>
+        <strong>Rp <span id="totalDisplay">0</span></strong>
+    </div>
+    <button class="btn-pay" onclick="checkout()">Bayar Sekarang</button>
+</div>
+
+<div id="modal">
+    <div class="receipt" id="receiptContent">
+        </div>
+</div>
+
+<script>
+    const menu = [
+        { id: 1, nama: "Espresso Double", harga: 18000 },
+        { id: 2, nama: "Caramel Latte", harga: 28000 },
+        { id: 3, nama: "Brown Sugar Coffee", harga: 22000 },
+        { id: 4, nama: "Croissant Almond", harga: 25000 }
+    ];
+
+    let cart = [];
+
+    function renderMenu() {
+        const container = document.getElementById('menuDisplay');
+        menu.forEach(item => {
+            container.innerHTML += `
+                <div class="card">
+                    <h3>${item.nama}</h3>
+                    <div class="price">Rp ${item.harga.toLocaleString()}</div>
+                    <button class="btn-add" onclick="addToCart(${item.id})">Pilih</button>
+                </div>
+            `;
+        });
+    }
+
+    function addToCart(id) {
+        const item = menu.find(p => p.id === id);
+        cart.push(item);
+        updateTotal();
+    }
+
+    function updateTotal() {
+        const total = cart.reduce((sum, item) => sum + item.harga, 0);
+        document.getElementById('totalDisplay').innerText = total.toLocaleString();
+    }
+
+    function checkout() {
+        const name = document.getElementById('customerName').value;
+        const pay = document.getElementById('paymentMethod').value;
+        const total = cart.reduce((sum, item) => sum + item.harga, 0);
+
+        if (!name) return alert("Mohon isi nama Anda!");
+        if (cart.length === 0) return alert("Keranjang masih kosong!");
+
+        const now = new Date();
+        const timeString = now.getHours() + ":" + now.getMinutes();
+
+        let itemsHtml = '';
+        cart.forEach(item => {
+            itemsHtml += `<div class="receipt-line"><span>${item.nama}</span><span>${item.harga.toLocaleString()}</span></div>`;
+        });
+
+        document.getElementById('receiptContent').innerHTML = `
+            <h2>COFFEE TECH</h2>
+            <p style="text-align:center">Order ID: #${Math.floor(Math.random() * 1000)}</p>
+            <div class="receipt-line"><span>Customer:</span><span>${name}</span></div>
+            <div class="receipt-line"><span>Waktu:</span><span>${timeString} WIB</span></div>
+            <div class="receipt-line"><span>Bayar:</span><span>${pay}</span></div>
+            <hr>
+            ${itemsHtml}
+            <div class="total-line">
+                <span>TOTAL</span>
+                <span>Rp ${total.toLocaleString()}</span>
+            </div>
+            <p style="text-align:center; margin-top:20px;">LUNAS<br>Terima Kasih!</p>
+            <button onclick="location.reload()" style="width:100%; padding:10px; background:#333; color:white; border:none; border-radius:5px; margin-top:10px;">Order Baru</button>
+        `;
+
+        document.getElementById('modal').style.display = 'flex';
+    }
+
+    renderMenu();
+</script>
+
+</body>
+</html>
